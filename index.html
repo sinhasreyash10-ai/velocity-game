@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AP Physics 1: Velocity Racing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 100%);
+            font-family: 'Orbitron', monospace;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 600px;
+            height: 800px;
+            background: linear-gradient(180deg, #0a0a1a 0%, #1a1a2e 50%, #0a0a1a 100%);
+            border: 3px solid #00ffff;
+            box-shadow: 0 0 20px #00ffff, inset 0 0 20px rgba(0, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            background: #000;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            color: #00ffff;
+            font-size: 12px;
+            z-index: 10;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 10px;
+            border: 1px solid #00ffff;
+            border-radius: 4px;
+        }
+
+        .hud-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 8px;
+            border-left: 2px solid #ff00ff;
+            padding-left: 10px;
+        }
+
+        .hud-label {
+            color: #ff00ff;
+            font-weight: bold;
+        }
+
+        .hud-value {
+            color: #00ffff;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+
+        #questionOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            border: 3px solid #ff00ff;
+        }
+
+        #questionOverlay.show {
+            display: flex;
+        }
+
+        #questionContent {
+            text-align: center;
+            color: #00ffff;
+            max-width: 520px;
+            padding: 20px;
+        }
+
+        #questionText {
+            font-size: 16px;
+            margin-bottom: 20px;
+            color: #00ffff;
+            line-height: 1.4;
+        }
+
+        #questionTimer {
+            font-size: 32px;
+            color: #ff00ff;
+            margin-bottom: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .option {
+            padding: 14px 16px;
+            border: 2px solid #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+            color: #00ffff;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+            font-weight: bold;
+            font-family: 'Orbitron', monospace;
+        }
+
+        .option:hover {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 10px #00ffff;
+            transform: scale(1.02);
+        }
+
+        .option.selected {
+            background: rgba(255, 0, 255, 0.5);
+            border-color: #ff00ff;
+            box-shadow: 0 0 15px #ff00ff;
+        }
+
+        .option.correct {
+            background: rgba(0, 255, 0, 0.4);
+            border-color: #00ff00;
+            box-shadow: 0 0 15px #00ff00;
+        }
+
+        .option.incorrect {
+            background: rgba(255, 0, 0, 0.3);
+            border-color: #ff0000;
+        }
+
+        #explanation {
+            margin-top: 15px;
+            padding: 12px;
+            border-left: 3px solid #ffff00;
+            color: #ffff00;
+            text-align: left;
+            font-size: 12px;
+            display: none;
+            background: rgba(255, 255, 0, 0.05);
+            line-height: 1.4;
+        }
+
+        #explanation.show {
+            display: block;
+        }
+
+        #titleScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(10, 0, 30, 0.98));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 250;
+            border: 3px solid #00ffff;
+            overflow-y: auto;
+        }
+
+        #titleScreen.hidden {
+            display: none;
+        }
+
+        #titleContent {
+            text-align: center;
+            color: #00ffff;
+            padding: 20px;
+        }
+
+        #gameTitle {
+            font-size: 52px;
+            color: #00ffff;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px #00ffff;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        #subtitle {
+            font-size: 24px;
+            color: #ff00ff;
+            margin-bottom: 30px;
+            text-shadow: 0 0 15px #ff00ff;
+        }
+
+        #instructions-text {
+            font-size: 14px;
+            color: #00ffff;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        #instructions-text p {
+            margin: 8px 0;
+        }
+
+        #startPrompt {
+            font-size: 18px;
+            color: #ffff00;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ffff00;
+            animation: pulse 1.5s infinite;
+        }
+
+        #credits {
+            font-size: 12px;
+            color: #ff00ff;
+            margin-top: 20px;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.98), rgba(10, 0, 30, 0.98));
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            border: 3px solid #ff00ff;
+            overflow-y: auto;
+        }
+
+        #gameOverScreen.show {
+            display: flex;
+        }
+
+        #gameOverContent {
+            text-align: center;
+            color: #00ffff;
+            padding: 20px;
+        }
+
+        #gameOverTitle {
+            font-size: 48px;
+            color: #ff00ff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ff00ff;
+        }
+
+        .stats {
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        .stat-line {
+            margin: 8px 0;
+            color: #00ffff;
+        }
+
+        .stat-line .label {
+            color: #ff00ff;
+            display: inline-block;
+            min-width: 150px;
+            text-align: left;
+        }
+
+        #leaderboard {
+            margin: 25px 0;
+            padding: 15px;
+            border: 2px solid #00ffff;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .leaderboard-title {
+            color: #ff00ff;
+            font-size: 18px;
+            margin-bottom: 12px;
+            text-shadow: 0 0 10px #ff00ff;
+        }
+
+        .leaderboard-entry {
+            color: #00ffff;
+            margin: 6px 0;
+            font-size: 12px;
+        }
+
+        .leaderboard-entry.current {
+            color: #ffff00;
+            background: rgba(255, 255, 0, 0.1);
+            padding: 4px 8px;
+            border-left: 2px solid #ffff00;
+        }
+
+        #playAgainBtn {
+            padding: 12px 30px;
+            font-size: 18px;
+            background: linear-gradient(135deg, #00ffff, #ff00ff);
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 0 15px #00ffff;
+            border-radius: 4px;
+        }
+
+        #playAgainBtn:hover {
+            box-shadow: 0 0 25px #ff00ff;
+            transform: scale(1.05);
+        }
+
+        #playAgainBtn:active {
+            transform: scale(0.95);
+        }
+
+        .speed-boost-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 255, 255, 0.3);
+            pointer-events: none;
+            animation: speedFlash 0.4s ease-out;
+            z-index: 99;
+        }
+
+        .speed-slow-effect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0.2);
+            pointer-events: none;
+            animation: slowFlash 0.4s ease-out;
+            z-index: 99;
+        }
+
+        @keyframes speedFlash {
+            0% {
+                opacity: 1;
+                background: rgba(0, 255, 255, 0.6);
+            }
+            100% {
+                opacity: 0;
+                background: rgba(0, 255, 255, 0);
+            }
+        }
+
+        @keyframes slowFlash {
+            0% {
+                opacity: 1;
+                background: rgba(255, 0, 0, 0.4);
+            }
+            100% {
+                opacity: 0;
+                background: rgba(255, 0, 0, 0);
+            }
+        }
+
+        .grid-lines {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(0deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .instruction-text {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00ffff;
+            font-size: 11px;
+            text-align: center;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div class="grid-lines"></div>
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="hud">
+            <div class="hud-item">
+                <span class="hud-label">SPEED</span>
+                <span class="hud-value" id="hudSpeed">15.0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">DISTANCE</span>
+                <span class="hud-value" id="hudDistance">0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">TIME</span>
+                <span class="hud-value" id="hudTime">0 s</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">SCORE</span>
+                <span class="hud-value" id="hudScore">0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">ACCURACY</span>
+                <span class="hud-value" id="hudAccuracy">0%</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">STATUS</span>
+                <span class="hud-value" id="hudStatus">READY</span>
+            </div>
+        </div>
+
+        <div id="questionOverlay">
+            <div id="questionContent">
+                <div id="questionText"></div>
+                <div id="questionTimer"></div>
+                <div class="options-grid" id="optionsGrid"></div>
+                <div id="explanation"></div>
+            </div>
+        </div>
+
+        <div id="titleScreen">
+            <div id="titleContent">
+                <div id="gameTitle">⚡ VELOCITY RACING ⚡</div>
+                <div id="subtitle">AP Physics 1 Edition</div>
+                <div id="instructions-text">
+                    <p>Navigate the highway. Dodge obstacles.</p>
+                    <p>Answer physics questions correctly to boost your speed.</p>
+                    <p>Travel as far as possible without crashing!</p>
+                </div>
+                <div id="startPrompt">PRESS SPACE OR CLICK TO START</div>
+                <div id="credits">Created by Sreyash S. and Andrew G.</div>
+            </div>
+        </div>
+
+        <div id="gameOverScreen">
+            <div id="gameOverContent">
+                <div id="gameOverTitle">GAME OVER</div>
+                <div class="stats">
+                    <div class="stat-line"><span class="label">FINAL SPEED:</span> <span id="finalSpeed">0 m/s</span></div>
+                    <div class="stat-line"><span class="label">DISTANCE:</span> <span id="finalDistance">0 m</span></div>
+                    <div class="stat-line"><span class="label">TIME:</span> <span id="finalTime">0 s</span></div>
+                    <div class="stat-line"><span class="label">QUESTIONS CORRECT:</span> <span id="finalCorrect">0/0</span></div>
+                    <div class="stat-line"><span class="label">ACCURACY:</span> <span id="finalAccuracy">0%</span></div>
+                    <div class="stat-line"><span class="label">FINAL SCORE:</span> <span id="finalScore">0</span></div>
+                </div>
+                <div id="leaderboard">
+                    <div class="leaderboard-title">⚡ TOP 5 HIGH SCORES ⚡</div>
+                    <div id="leaderboardList"></div>
+                </div>
+                <button id="playAgainBtn">PLAY AGAIN</button>
+            </div>
+        </div>
+
+        <div class="instruction-text">
+            ← → arrow keys to steer | A/B/C/D keys for answers
+        </div>
+    </div>
+
+    <script>
+        // Physics questions database (40 questions covering all AP Physics 1 topics)
+        const physicsQuestions = [
+            // Kinematics (8 questions)
+            {
+                question: "A car accelerates from rest at 2 m/s². How far does it travel in 5 seconds?",
+                options: ["10 m", "25 m", "50 m", "100 m"],
+                correct: 1,
+                explanation: "Using s = ut + ½at²: s = 0 + ½(2)(5²) = 25 m"
+            },
+            {
+                question: "An object is thrown upward with an initial velocity of 20 m/s. What is its velocity at the highest point (g = 10 m/s²)?",
+                options: ["20 m/s", "0 m/s", "10 m/s", "-20 m/s"],
+                correct: 1,
+                explanation: "At the highest point, vertical velocity is zero (v = u + at = 20 - 10(2) = 0)."
+            },
+            {
+                question: "A car travels 100 m in 5 seconds with constant velocity. What is its average velocity?",
+                options: ["20 m/s", "25 m/s", "500 m/s", "0.05 m/s"],
+                correct: 0,
+                explanation: "Average velocity = distance / time = 100 m / 5 s = 20 m/s"
+            },
+            {
+                question: "An object falls from rest for 3 seconds. How far does it fall (g = 10 m/s²)?",
+                options: ["30 m", "45 m", "90 m", "15 m"],
+                correct: 1,
+                explanation: "Using s = ½gt²: s = ½(10)(3²) = 45 m"
+            },
+            {
+                question: "A runner accelerates uniformly from 2 m/s to 8 m/s in 3 seconds. What is the acceleration?",
+                options: ["2 m/s²", "3 m/s²", "1.5 m/s²", "4 m/s²"],
+                correct: 0,
+                explanation: "a = (v - u) / t = (8 - 2) / 3 = 2 m/s²"
+            },
+            {
+                question: "A projectile is launched horizontally at 15 m/s from a cliff. After 2 seconds, what is its vertical velocity (g = 10 m/s²)?",
+                options: ["5 m/s", "10 m/s", "20 m/s", "30 m/s"],
+                correct: 2,
+                explanation: "Vertical motion: v = u + gt = 0 + 10(2) = 20 m/s downward"
+            },
+            {
+                question: "A car traveling at 30 m/s brakes with a deceleration of 5 m/s². How long does it take to stop?",
+                options: ["6 s", "5 s", "4 s", "10 s"],
+                correct: 0,
+                explanation: "Using v = u + at: 0 = 30 - 5t → t = 6 s"
+            },
+            {
+                question: "What is the displacement of an object that travels at 10 m/s for 4 seconds?",
+                options: ["2.5 m", "14 m", "40 m", "0.4 m"],
+                correct: 2,
+                explanation: "For constant velocity: s = vt = 10 × 4 = 40 m"
+            },
+            // Newton's Laws (8 questions)
+            {
+                question: "What is the net force on a 1000 kg car accelerating at 2 m/s²?",
+                options: ["500 N", "1000 N", "2000 N", "5000 N"],
+                correct: 2,
+                explanation: "F = ma = 1000 kg × 2 m/s² = 2000 N"
+            },
+            {
+                question: "A block on a table has friction coefficient μ = 0.5. If the normal force is 100 N, what is the friction force?",
+                options: ["50 N", "100 N", "200 N", "0.5 N"],
+                correct: 0,
+                explanation: "Friction force = μ × N = 0.5 × 100 = 50 N"
+            },
+            {
+                question: "Two objects have masses m₁ = 2 kg and m₂ = 3 kg. If the same force is applied to both, which accelerates more?",
+                options: ["m₁ accelerates more", "m₂ accelerates more", "Both equally", "Cannot determine"],
+                correct: 0,
+                explanation: "Since F = ma, with the same F, smaller mass gives larger acceleration."
+            },
+            {
+                question: "What is the weight of a 50 kg object on Earth (g = 10 m/s²)?",
+                options: ["50 N", "100 N", "500 N", "5 N"],
+                correct: 2,
+                explanation: "Weight = mg = 50 kg × 10 m/s² = 500 N"
+            },
+            {
+                question: "A 5 kg block is pulled with a net force of 30 N across a frictionless surface. What is its acceleration?",
+                options: ["150 m/s²", "6 m/s²", "0.17 m/s²", "25 m/s²"],
+                correct: 1,
+                explanation: "a = F/m = 30 N / 5 kg = 6 m/s²"
+            },
+            {
+                question: "A 1200 kg car brakes with deceleration 5 m/s². What is the braking force?",
+                options: ["240 N", "1200 N", "6000 N", "12000 N"],
+                correct: 2,
+                explanation: "F = ma = 1200 kg × 5 m/s² = 6000 N"
+            },
+            {
+                question: "An object experiences a net force of zero. Which statement is true?",
+                options: ["It must be at rest", "It has constant velocity", "It is accelerating", "Its mass is zero"],
+                correct: 1,
+                explanation: "By Newton's first law, if net force is zero, the object moves at constant velocity (or remains at rest)."
+            },
+            {
+                question: "A 500 kg object moves at constant velocity. The friction force is 1000 N. What is the applied force?",
+                options: ["500 N", "1000 N", "1500 N", "0 N"],
+                correct: 1,
+                explanation: "At constant velocity, acceleration = 0, so net force = 0. Applied force = friction force = 1000 N."
+            },
+            // Work & Energy (8 questions)
+            {
+                question: "How much work is done by a force of 50 N pushing an object 10 m?",
+                options: ["5 J", "60 J", "500 J", "0.2 J"],
+                correct: 2,
+                explanation: "Work = Force × distance = 50 N × 10 m = 500 J"
+            },
+            {
+                question: "What is the kinetic energy of a 2 kg object moving at 5 m/s?",
+                options: ["10 J", "25 J", "50 J", "5 J"],
+                correct: 1,
+                explanation: "KE = ½mv² = ½(2)(5²) = 25 J"
+            },
+            {
+                question: "An object with mass 4 kg is lifted 5 m vertically (g = 10 m/s²). What is its change in PE?",
+                options: ["20 J", "40 J", "200 J", "100 J"],
+                correct: 2,
+                explanation: "ΔPE = mgh = 4 × 10 × 5 = 200 J"
+            },
+            {
+                question: "If a ball is thrown upward with KE = 100 J and rises to max height, what is its PE at that height?",
+                options: ["50 J", "100 J", "200 J", "0 J"],
+                correct: 1,
+                explanation: "By conservation of energy, all kinetic energy converts to potential energy: PE = 100 J"
+            },
+            {
+                question: "A 3 kg object accelerates from 0 to 6 m/s. How much work is done?",
+                options: ["18 J", "36 J", "54 J", "9 J"],
+                correct: 2,
+                explanation: "Work = ΔKE = ½(3)(6²) - 0 = 54 J"
+            },
+            {
+                question: "Which has more kinetic energy: a 1 kg object at 10 m/s or a 2 kg object at 5 m/s?",
+                options: ["1 kg object", "2 kg object", "Same kinetic energy", "Cannot determine"],
+                correct: 0,
+                explanation: "KE₁ = ½(1)(10²) = 50 J; KE₂ = ½(2)(5²) = 25 J. The 1 kg object has more KE."
+            },
+            {
+                question: "A power of 100 W is applied for 10 seconds. How much work is done?",
+                options: ["10 J", "100 J", "1000 J", "10 W"],
+                correct: 2,
+                explanation: "Work = Power × time = 100 W × 10 s = 1000 J"
+            },
+            {
+                question: "A person climbs stairs gaining 5000 J of PE in 10 seconds. What is the power output?",
+                options: ["500 W", "50 W", "5000 W", "50000 W"],
+                correct: 0,
+                explanation: "Power = Work / time = 5000 J / 10 s = 500 W"
+            },
+            // Momentum & Collisions (8 questions)
+            {
+                question: "What is the momentum of a 2 kg object moving at 5 m/s?",
+                options: ["2.5 kg·m/s", "10 kg·m/s", "7 kg·m/s", "0.4 kg·m/s"],
+                correct: 1,
+                explanation: "p = mv = 2 kg × 5 m/s = 10 kg·m/s"
+            },
+            {
+                question: "A 1000 kg car changes velocity from 10 m/s to 20 m/s in 5 seconds. What is the impulse?",
+                options: ["1000 N·s", "5000 N·s", "10000 N·s", "2000 N·s"],
+                correct: 2,
+                explanation: "Impulse = Δp = m(v - u) = 1000(20 - 10) = 10000 N·s"
+            },
+            {
+                question: "In an elastic collision between two identical objects where one is at rest, what happens?",
+                options: ["The moving object stops", "Momentum is not conserved", "Both objects move at equal speeds", "The rest object remains at rest"],
+                correct: 0,
+                explanation: "In elastic collision between identical masses with one at rest, the velocities exchange."
+            },
+            {
+                question: "Two objects collide and stick together. This is an example of:",
+                options: ["Elastic collision", "Inelastic collision", "Explosive collision", "No collision"],
+                correct: 1,
+                explanation: "A perfectly inelastic collision is one where objects stick together."
+            },
+            {
+                question: "A 2 kg object moving at 3 m/s collides with a 1 kg stationary object and they stick. What is the final velocity?",
+                options: ["1 m/s", "1.5 m/s", "2 m/s", "3 m/s"],
+                correct: 2,
+                explanation: "Using conservation: (2)(3) + (1)(0) = (3)v, so v = 2 m/s"
+            },
+            {
+                question: "A force of 50 N is applied to an object for 4 seconds. What is the impulse?",
+                options: ["12.5 N·s", "50 N·s", "200 N·s", "0.08 N·s"],
+                correct: 2,
+                explanation: "Impulse = Force × time = 50 N × 4 s = 200 N·s"
+            },
+            {
+                question: "Which of the following conserves momentum in a collision?",
+                options: ["Only elastic", "Only inelastic", "Both elastic and inelastic", "Neither"],
+                correct: 2,
+                explanation: "Momentum is conserved in both elastic and inelastic collisions (in isolated systems)."
+            },
+            {
+                question: "A 0.1 kg ball moving at 20 m/s hits a wall and stops. What is the change in momentum?",
+                options: ["2 kg·m/s", "0.2 kg·m/s", "0 kg·m/s", "-2 kg·m/s"],
+                correct: 3,
+                explanation: "Δp = m(v_f - v_i) = 0.1(0 - 20) = -2 kg·m/s"
+            },
+            // Circular Motion (8 questions)
+            {
+                question: "An object moves in a circle of radius 2 m with speed 4 m/s. What is its centripetal acceleration?",
+                options: ["2 m/s²", "4 m/s²", "8 m/s²", "16 m/s²"],
+                correct: 2,
+                explanation: "a_c = v²/r = 4²/2 = 8 m/s²"
+            },
+            {
+                question: "A satellite orbits Earth with period T = 2 hours. The centripetal force is proportional to:",
+                options: ["1/R", "1/R²", "R", "R²"],
+                correct: 1,
+                explanation: "For circular orbits, gravitational force (centripetal force) is proportional to 1/R²."
+            },
+            {
+                question: "An object undergoes uniform circular motion. Which quantity remains constant?",
+                options: ["Velocity", "Speed", "Acceleration", "Force direction"],
+                correct: 1,
+                explanation: "In uniform circular motion, speed (magnitude) is constant, but velocity direction changes."
+            },
+            {
+                question: "A car rounds a curve of radius 50 m at 20 m/s. What is the centripetal acceleration?",
+                options: ["4 m/s²", "8 m/s²", "2.5 m/s²", "40 m/s²"],
+                correct: 2,
+                explanation: "a_c = v²/r = (20)²/50 = 400/50 = 8 m/s²"
+            },
+            {
+                question: "If an object's speed doubles in circular motion, the centripetal force changes by a factor of:",
+                options: ["2", "4", "√2", "0.5"],
+                correct: 1,
+                explanation: "F_c = mv²/r, so if v doubles, F_c increases by a factor of 4."
+            },
+            {
+                question: "A 1500 kg car rounds a curve of radius 75 m. If centripetal force is 15000 N, what is the speed?",
+                options: ["10 m/s", "15 m/s", "20 m/s", "5 m/s"],
+                correct: 2,
+                explanation: "F_c = mv²/r → 15000 = 1500 × v² / 75 → v² = 750 → v ≈ 20 m/s (approximately)"
+            },
+            {
+                question: "An object in circular motion has centripetal acceleration of 10 m/s² and radius 5 m. What is its speed?",
+                options: ["2 m/s", "5 m/s", "7.1 m/s", "50 m/s"],
+                correct: 2,
+                explanation: "a_c = v²/r → 10 = v²/5 → v² = 50 → v = √50 ≈ 7.1 m/s"
+            },
+            {
+                question: "The period of an object in circular motion is 4 seconds. What is its frequency?",
+                options: ["0.25 Hz", "4 Hz", "0.5 Hz", "8 Hz"],
+                correct: 0,
+                explanation: "Frequency = 1/Period = 1/4 = 0.25 Hz"
+            }
+        ];
+
+        // Game state
+        const gameState = {
+            speed: 8,
+            maxSpeed: 20,
+            acceleration: 0.08,
+            deceleration: 0.05,
+            posX: 275,
+            distance: 0,
+            elapsedTime: 0,
+            score: 0,
+            questionsAnswered: 0,
+            correctAnswers: 0,
+            gameRunning: false,
+            titleScreenShowing: true,
+            crashed: false,
+            boostActive: false,
+            boostTimeRemaining: 0,
+            slowActive: false,
+            slowTimeRemaining: 0,
+            nextQuestionTime: Math.random() * 5 + 10,
+            questionActive: false,
+            currentQuestion: null,
+            currentQuestionIndex: 0,
+            questionAnswered: false,
+            questionTimeRemaining: 15,
+            roadScrollOffset: 0,
+            lastFrameTime: Date.now(),
+            keys: {}
+        };
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 600;
+        canvas.height = 800;
+
+        // Obstacles
+        const obstacles = [];
+        let lastObstacleTime = 0;
+
+        class Obstacle {
+            constructor(x, type) {
+                this.x = x;
+                this.y = -50;
+                this.width = 60;
+                this.height = 80;
+                this.type = type; // 'car', 'debris', 'oil'
+                this.speed = 0;
+                this.friction = 0;
+
+                if (type === 'oil') {
+                    this.friction = Math.random() * 0.5 + 0.2;
+                    this.width = 80;
+                    this.height = 30;
+                }
+            }
+
+            update() {
+                this.y += gameState.speed;
+            }
+
+            draw() {
+                if (this.type === 'car') {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(this.x + 10, this.y + 10, 40, 20);
+                    ctx.strokeStyle = '#ff00ff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(this.x, this.y, this.width, this.height);
+                } else if (this.type === 'debris') {
+                    ctx.fillStyle = '#ff8800';
+                    ctx.save();
+                    ctx.translate(this.x + 15, this.y + 15);
+                    ctx.rotate(Date.now() / 500);
+                    ctx.fillRect(-15, -15, 30, 30);
+                    ctx.restore();
+                    ctx.fillStyle = '#ffff00';
+                    ctx.fillRect(this.x + 5, this.y + 5, 20, 20);
+                } else if (this.type === 'oil') {
+                    ctx.fillStyle = `rgba(100, 0, 150, 0.6)`;
+                    ctx.beginPath();
+                    ctx.ellipse(this.x + 40, this.y + 15, 40, 15, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ff00ff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.fillStyle = '#ffff00';
+                    ctx.font = 'bold 10px Orbitron';
+                    ctx.fillText(`μ=${this.friction.toFixed(1)}`, this.x + 15, this.y + 20);
+                }
+            }
+
+            isColliding(carX, carY, carWidth, carHeight) {
+                return carX < this.x + this.width &&
+                       carX + carWidth > this.x &&
+                       carY < this.y + this.height &&
+                       carY + carHeight > this.y;
+            }
+        }
+
+        // Spawn obstacles
+        function spawnObstacle() {
+            if (!gameState.questionActive) {
+                const lanes = [75, 265, 455];
+                const x = lanes[Math.floor(Math.random() * lanes.length)];
+                const types = ['car', 'debris', 'debris', 'oil'];
+                const type = types[Math.floor(Math.random() * types.length)];
+                obstacles.push(new Obstacle(x, type));
+                lastObstacleTime = gameState.elapsedTime;
+            }
+        }
+
+        // Player car - 3rd person perspective with detailed design
+        function drawCar() {
+            const carWidth = 55;
+            const carHeight = 90;
+            const carX = gameState.posX;
+            const carY = 685;
+            
+            ctx.save();
+            
+            // Shadow/projection effect for 3D feel
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(carX + 2, carY + 88, carWidth - 4, 12);
+            
+            // Car body - main chassis (darker magenta)
+            const bodyColor = gameState.boostActive ? '#00ffff' : '#ff00ff';
+            ctx.fillStyle = bodyColor;
+            ctx.shadowColor = bodyColor;
+            ctx.shadowBlur = gameState.boostActive ? 25 : 15;
+            
+            // Main car body
+            ctx.fillRect(carX + 5, carY + 15, carWidth - 10, carHeight - 35);
+            
+            // Front bumper
+            ctx.fillStyle = gameState.boostActive ? '#0088ff' : '#cc00ff';
+            ctx.fillRect(carX + 8, carY + 8, carWidth - 16, 8);
+            
+            // Hood lines
+            ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(carX + 15, carY + 25);
+            ctx.lineTo(carX + carWidth - 15, carY + 25);
+            ctx.stroke();
+            
+            // Front windshield/window
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.6)';
+            ctx.fillRect(carX + 10, carY + 20, carWidth - 20, 25);
+            ctx.strokeStyle = '#00ffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(carX + 10, carY + 20, carWidth - 20, 25);
+            
+            // Cabin/Body middle section
+            ctx.fillStyle = gameState.boostActive ? '#00ffff' : '#ff00ff';
+            ctx.fillRect(carX + 5, carY + 45, carWidth - 10, 30);
+            
+            // Back window
+            ctx.fillStyle = 'rgba(255, 0, 255, 0.4)';
+            ctx.fillRect(carX + 12, carY + 52, carWidth - 24, 16);
+            
+            // Rear bumper
+            ctx.fillStyle = gameState.boostActive ? '#0088ff' : '#cc00ff';
+            ctx.fillRect(carX + 8, carY + carHeight - 12, carWidth - 16, 8);
+            
+            // Front wheels
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(carX + 12, carY + 15, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(carX + carWidth - 12, carY + 15, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Front wheel highlights
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.ellipse(carX + 12, carY + 14, 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(carX + carWidth - 12, carY + 14, 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Back wheels
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.ellipse(carX + 12, carY + carHeight - 8, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(carX + carWidth - 12, carY + carHeight - 8, 8, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Back wheel highlights
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.ellipse(carX + 12, carY + carHeight - 9, 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(carX + carWidth - 12, carY + carHeight - 9, 4, 3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Speed lines for boost effect
+            if (gameState.boostActive) {
+                ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(carX - 15 - i * 12, carY + 25 + i * 8);
+                    ctx.lineTo(carX - 35 - i * 12, carY + 25 + i * 8);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(carX + carWidth + 15 + i * 12, carY + 25 + i * 8);
+                    ctx.lineTo(carX + carWidth + 35 + i * 12, carY + 25 + i * 8);
+                    ctx.stroke();
+                }
+            }
+            
+            ctx.restore();
+        }
+
+        // Draw road with 3D perspective
+        function drawRoadLines() {
+            gameState.roadScrollOffset += gameState.speed * 0.4;
+            if (gameState.roadScrollOffset > 40) {
+                gameState.roadScrollOffset = 0;
+            }
+
+            // Draw center line with perspective (converging lines)
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([15, 20]);
+            
+            // Multiple lines at different positions to create 3D effect
+            for (let i = 0; i < 15; i++) {
+                const yPos = (i * 60) - gameState.roadScrollOffset;
+                const perspective = 1 - (yPos / 800) * 0.3;
+                
+                ctx.globalAlpha = Math.max(0, 1 - (yPos / 800));
+                ctx.beginPath();
+                ctx.moveTo(300 - 20 * (1 - perspective), yPos);
+                ctx.lineTo(300 + 20 * (1 - perspective), yPos);
+                ctx.stroke();
+            }
+            
+            ctx.globalAlpha = 1.0;
+
+            // Road edge lines (side markers)
+            ctx.strokeStyle = 'rgba(255, 255, 0, 0.2)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            
+            ctx.beginPath();
+            ctx.moveTo(35, -gameState.roadScrollOffset);
+            ctx.lineTo(35, 800 - gameState.roadScrollOffset);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(565, -gameState.roadScrollOffset);
+            ctx.lineTo(565, 800 - gameState.roadScrollOffset);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+        }
+
+        // Draw background
+        function drawBackground() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 600, 800);
+            
+            // Road edges
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+            ctx.fillRect(0, 0, 30, 800);
+            ctx.fillRect(570, 0, 30, 800);
+        }
+
+        // Physics question system
+        function showQuestion() {
+            gameState.questionActive = true;
+            gameState.questionAnswered = false;
+            gameState.questionTimeRemaining = 15;
+            gameState.currentQuestionIndex = Math.floor(Math.random() * physicsQuestions.length);
+            gameState.currentQuestion = physicsQuestions[gameState.currentQuestionIndex];
+
+            const overlay = document.getElementById('questionOverlay');
+            overlay.classList.add('show');
+
+            const questionText = document.getElementById('questionText');
+            questionText.textContent = gameState.currentQuestion.question;
+
+            const optionsGrid = document.getElementById('optionsGrid');
+            optionsGrid.innerHTML = '';
+
+            gameState.currentQuestion.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'option';
+                button.textContent = `${String.fromCharCode(65 + index)}: ${option}`;
+                button.onclick = () => answerQuestion(index);
+                button.id = `option-${index}`;
+                optionsGrid.appendChild(button);
+            });
+
+            document.getElementById('explanation').classList.remove('show');
+            document.getElementById('explanation').textContent = '';
+        }
+
+        function answerQuestion(selectedIndex) {
+            if (gameState.questionAnswered) return;
+
+            gameState.questionAnswered = true;
+            const isCorrect = selectedIndex === gameState.currentQuestion.correct;
+
+            const buttons = document.querySelectorAll('.option');
+            buttons.forEach((btn, idx) => {
+                btn.style.pointerEvents = 'none';
+                if (idx === gameState.currentQuestion.correct) {
+                    btn.classList.add('correct');
+                } else if (idx === selectedIndex && !isCorrect) {
+                    btn.classList.add('incorrect');
+                }
+            });
+
+            if (isCorrect) {
+                gameState.score += 100;
+                gameState.boostActive = true;
+                gameState.boostTimeRemaining = 8;
+                gameState.correctAnswers++;
+                createSpeedBoostEffect();
+            } else {
+                gameState.score = Math.max(0, gameState.score - 25);
+                gameState.slowActive = true;
+                gameState.slowTimeRemaining = 5;
+                createSlowEffect();
+            }
+
+            gameState.questionsAnswered++;
+
+            const explanation = document.getElementById('explanation');
+            explanation.textContent = gameState.currentQuestion.explanation;
+            explanation.classList.add('show');
+
+            setTimeout(() => hideQuestion(), 4000);
+        }
+
+        function hideQuestion() {
+            gameState.questionActive = false;
+            document.getElementById('questionOverlay').classList.remove('show');
+            gameState.nextQuestionTime = gameState.elapsedTime + Math.random() * 5 + 10;
+        }
+
+        function createSpeedBoostEffect() {
+            const effect = document.createElement('div');
+            effect.className = 'speed-boost-effect';
+            document.getElementById('gameContainer').appendChild(effect);
+            setTimeout(() => effect.remove(), 400);
+        }
+
+        function createSlowEffect() {
+            const effect = document.createElement('div');
+            effect.className = 'speed-slow-effect';
+            document.getElementById('gameContainer').appendChild(effect);
+            setTimeout(() => effect.remove(), 400);
+        }
+
+        // Update HUD
+        function updateHUD() {
+            document.getElementById('hudSpeed').textContent = gameState.speed.toFixed(1) + ' m/s';
+            document.getElementById('hudDistance').textContent = Math.floor(gameState.distance);
+            document.getElementById('hudTime').textContent = Math.floor(gameState.elapsedTime) + 's';
+            document.getElementById('hudScore').textContent = gameState.score;
+            const accuracy = gameState.questionsAnswered > 0 ? Math.round((gameState.correctAnswers / gameState.questionsAnswered) * 100) : 0;
+            document.getElementById('hudAccuracy').textContent = accuracy + '%';
+            document.getElementById('hudStatus').textContent = gameState.boostActive ? 'BOOST!' : (gameState.slowActive ? 'SLOW!' : 'NORMAL');
+        }
+
+        // Update question timer
+        function updateQuestionTimer() {
+            if (gameState.questionActive && !gameState.questionAnswered) {
+                document.getElementById('questionTimer').textContent = Math.ceil(gameState.questionTimeRemaining) + 's';
+                if (gameState.questionTimeRemaining <= 0) {
+                    hideQuestion();
+                }
+            }
+        }
+
+        // Game Over
+        function gameOver() {
+            gameState.crashed = true;
+            gameState.gameRunning = false;
+
+            const accuracy = gameState.questionsAnswered > 0 ? (gameState.correctAnswers / gameState.questionsAnswered * 100).toFixed(1) : 0;
+            const finalScore = Math.floor(gameState.distance + (gameState.score * 0.5));
+
+            // Store score
+            const scores = JSON.parse(localStorage.getItem('velocityHighScores') || '[]');
+            scores.push({ 
+                score: finalScore, 
+                distance: Math.floor(gameState.distance), 
+                accuracy: accuracy, 
+                time: Math.floor(gameState.elapsedTime),
+                timestamp: Date.now()
+            });
+            scores.sort((a, b) => b.score - a.score);
+            scores.splice(5);
+            localStorage.setItem('velocityHighScores', JSON.stringify(scores));
+
+            // Display game over screen
+            document.getElementById('finalSpeed').textContent = gameState.speed.toFixed(1) + ' m/s';
+            document.getElementById('finalDistance').textContent = Math.floor(gameState.distance) + ' m';
+            document.getElementById('finalTime').textContent = Math.floor(gameState.elapsedTime) + ' s';
+            document.getElementById('finalCorrect').textContent = gameState.correctAnswers + '/' + gameState.questionsAnswered;
+            document.getElementById('finalAccuracy').textContent = accuracy + '%';
+            document.getElementById('finalScore').textContent = finalScore;
+
+            const leaderboardList = document.getElementById('leaderboardList');
+            leaderboardList.innerHTML = '';
+            scores.forEach((entry, idx) => {
+                const div = document.createElement('div');
+                div.className = 'leaderboard-entry';
+                div.innerHTML = `<strong>#${idx + 1}</strong> | Score: ${entry.score} | Distance: ${entry.distance}m | Accuracy: ${entry.accuracy}%`;
+                leaderboardList.appendChild(div);
+            });
+
+            document.getElementById('gameOverScreen').classList.add('show');
+        }
+
+        // Game loop
+        function gameLoop(timestamp) {
+            if (gameState.titleScreenShowing) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            if (!gameState.gameRunning) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+
+            const deltaTime = 16 / 1000; // Assume 60 FPS for consistent timing
+
+            // Update physics
+            if (gameState.boostActive) {
+                gameState.speed = Math.min(gameState.speed + 0.2, gameState.maxSpeed * 1.5);
+                gameState.boostTimeRemaining -= deltaTime;
+                if (gameState.boostTimeRemaining <= 0) {
+                    gameState.boostActive = false;
+                }
+            } else if (gameState.slowActive) {
+                gameState.speed = Math.max(5, gameState.speed - 0.1);
+                gameState.slowTimeRemaining -= deltaTime;
+                if (gameState.slowTimeRemaining <= 0) {
+                    gameState.slowActive = false;
+                }
+            } else {
+                gameState.speed = Math.min(gameState.speed + gameState.acceleration, gameState.maxSpeed);
+            }
+
+            // Update distance and time
+            gameState.distance += gameState.speed * deltaTime;
+            gameState.elapsedTime += deltaTime;
+
+            // Spawn obstacles
+            if (gameState.elapsedTime - lastObstacleTime > 2.5) {
+                spawnObstacle();
+            }
+
+            // Update obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].update();
+                
+                // Check collision
+                if (obstacles[i].isColliding(gameState.posX, 700, 50, 80)) {
+                    if (obstacles[i].type === 'oil') {
+                        const deceleration = obstacles[i].friction * 10;
+                        gameState.speed = Math.max(5, gameState.speed - deceleration);
+                    } else {
+                        gameOver();
+                        requestAnimationFrame(gameLoop);
+                        return;
+                    }
+                }
+
+                if (obstacles[i].y > 800) {
+                    obstacles.splice(i, 1);
+                }
+            }
+
+            // Question system
+            if (!gameState.questionActive && gameState.elapsedTime >= gameState.nextQuestionTime) {
+                showQuestion();
+            }
+
+            if (gameState.questionActive) {
+                gameState.questionTimeRemaining -= deltaTime;
+                updateQuestionTimer();
+            }
+
+            // Update car position
+            if (gameState.keys['ArrowLeft']) {
+                gameState.posX = Math.max(30, gameState.posX - 5);
+            }
+            if (gameState.keys['ArrowRight']) {
+                gameState.posX = Math.min(520, gameState.posX + 5);
+            }
+
+            // Draw game
+            drawBackground();
+            drawRoadLines();
+
+            for (let obstacle of obstacles) {
+                obstacle.draw();
+            }
+
+            drawCar();
+
+            // Update HUD
+            updateHUD();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Input handling
+        window.addEventListener('keydown', (e) => {
+            // Title screen start
+            if (gameState.titleScreenShowing && (e.key === ' ' || e.key === 'Enter')) {
+                startGameFromTitle();
+                return;
+            }
+
+            gameState.keys[e.key] = true;
+
+            if (gameState.questionActive && !gameState.questionAnswered) {
+                const keyMap = { 'a': 0, 'A': 0, 'b': 1, 'B': 1, 'c': 2, 'C': 2, 'd': 3, 'D': 3 };
+                if (e.key in keyMap) {
+                    answerQuestion(keyMap[e.key]);
+                }
+            }
+
+            if (gameState.crashed && (e.key === 'Enter' || e.key === ' ')) {
+                resetGame();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            gameState.keys[e.key] = false;
+        });
+
+        // Start game from title screen
+        function startGameFromTitle() {
+            gameState.titleScreenShowing = false;
+            gameState.gameRunning = true;
+            document.getElementById('titleScreen').classList.add('hidden');
+        }
+
+        // Reset game
+        function resetGame() {
+            gameState.speed = 8;
+            gameState.posX = 275;
+            gameState.distance = 0;
+            gameState.elapsedTime = 0;
+            gameState.score = 0;
+            gameState.questionsAnswered = 0;
+            gameState.correctAnswers = 0;
+            gameState.gameRunning = false;
+            gameState.titleScreenShowing = true;
+            gameState.crashed = false;
+            gameState.boostActive = false;
+            gameState.slowActive = false;
+            gameState.nextQuestionTime = Math.random() * 5 + 10;
+            gameState.questionActive = false;
+            gameState.roadScrollOffset = 0;
+            obstacles.length = 0;
+            lastObstacleTime = 0;
+
+            document.getElementById('titleScreen').classList.remove('hidden');
+            document.getElementById('gameOverScreen').classList.remove('show');
+            document.getElementById('questionOverlay').classList.remove('show');
+        }
+
+        // Play Again button
+        document.getElementById('playAgainBtn').addEventListener('click', resetGame);
+
+        // Title screen click to start
+        document.getElementById('titleScreen').addEventListener('click', startGameFromTitle);
+
+        // Start game loop
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
